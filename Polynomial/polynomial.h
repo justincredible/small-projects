@@ -12,11 +12,16 @@ public:
 	Polynomial(const int, double*);
 	Polynomial(const Polynomial &);
 	~Polynomial();
+	// exception classes
+	class OutOfRange {
+	};
+	class NoMemory {
+	};
 	// overloaded operators
-	Polynomial operator=(const Polynomial &right);
-	Polynomial operator+(const Polynomial &right);
-	Polynomial operator*(const Polynomial &right);
-	double operator[](int);
+	Polynomial operator=(const Polynomial &);
+	Polynomial operator+(const Polynomial &);
+	Polynomial operator*(const Polynomial &);
+	double& operator[](int);
 	// mutators and accessor functions
 	void setDegree(int);
 	void setCoefficient(int, double);

@@ -1,3 +1,4 @@
+#include <new>
 #include "polynomial.h"
 
 #define NULL 0
@@ -12,7 +13,12 @@ Polynomial::Polynomial() {
 Polynomial::Polynomial(const int deg) {
 	if ( deg >= 0 ) {
 		degree = deg;
-		coefficients = new double[degree+1];
+		try {
+			coefficients = new double[degree+1];
+		}
+		catch( std::bad_alloc ) {
+			throw NoMemory();
+		}
 		// initialize array. degree-th coefficient is 1 so that this polynomial
 		// is not identically the zero polynomial
 		for ( int i = 0; i < degree; i++ ) {
@@ -26,7 +32,12 @@ Polynomial::Polynomial(const int deg) {
 Polynomial::Polynomial(const int deg, double *arr) {
 	if ( deg >= 0 ) {
 		degree = deg;
-		coefficients = new double[degree+1];
+		try {
+			coefficients = new double[degree+1];
+		}
+		catch( std::bad_alloc ) {
+			throw NoMemory();
+		}
 		// set array to equal the first deg+1 elements of arr
 		for ( int i = 0; i <= degree; i++ ) {
 			coefficients[i] = arr[i];
@@ -37,7 +48,12 @@ Polynomial::Polynomial(const int deg, double *arr) {
 // create a polynomial identical to one that is already instantiated
 Polynomial::Polynomial(const Polynomial &original) {
 	degree = original.degree;
-	coefficients = new double[degree+1];
+	try {
+		coefficients = new double[degree+1];
+	}
+	catch( std::bad_alloc ) {
+		throw NoMemory();
+	}
 	for ( int i = 0; i <= degree; i++ ) {
 		coefficients[i] = original.coefficients[i];
 	}
@@ -54,7 +70,12 @@ Polynomial Polynomial::operator=(const Polynomial &right) {
 		delete [] this->coefficients;
 	}
 	this->degree = right.degree;
-	this->coefficients = new double[this->degree+1];
+	try {
+		this->coefficients = new double[this->degree+1];
+	}
+	catch( std::bad_alloc ) {
+		throw NoMemory();
+	}
 	for ( int i = 0; i <= this->degree; i++ ) {
 		this->coefficients[i] = right.coefficients[i];
 	}
@@ -74,12 +95,10 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
 	if ( this->degree < right.degree ) {
 		Polynomial result(right.degree);
 		for ( int i = 0; i <= this->degree; i++ ) {
-			result.setCoefficient(i,
-				this->coefficients[i] + right.coefficients[i]);
+			result[i] = this->coefficients[i] + right.coefficients[i];
 		}
 		for ( int i = this->degree+1; i <= right.degree; i++ ) {
-			result.setCoefficient(i,
-				right.coefficients[i]);
+			result[i] = right.coefficients[i];
 		}
 		return result;
 	}
@@ -87,12 +106,10 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
 		int index = this->degree;
 		Polynomial result(index);
 		for ( int i = 0; i <= right.degree; i++ ) {
-			result.setCoefficient(i,
-				this->coefficients[i] + right.coefficients[i]);
+			result[i] = this->coefficients[i] + right.coefficients[i];
 		}
 		for ( int i = right.degree+1; i <= index; i++ ) {
-			result.setCoefficient(i,
-				this->coefficients[i]);
+			result[i] = this->coefficients[i];
 		}
 		if ( result.getCoefficient(index) == 0 ) {
 			do {
@@ -113,25 +130,27 @@ Polynomial Polynomial::operator*(const Polynomial &right) {
 	int index = this->degree + right.degree;
 	Polynomial result(index);
 	double total;
+	// outer loop controls assignment to coefficients of result
 	for ( int i = 0; i <= index; i++ ) {
 		total = 0;
+		// inner loop adds the coefficients of all terms with degree i. 
 		for ( int j = 0; j <= i; j++ ) {
-			if ( right.degree >= i-j ) {
-				total += ((*this)[j] * right.coefficients[i-j]);
+			if ( this->degree >=j && right.degree >= i-j ) {
+				total += (*this)[j] * right.coefficients[i-j];
 			}
 		}
-		result.setCoefficient(i, total);
+		result[i] = total;
 	}
 	return result;
 }
 
 // fetches coefficients without calling the accessor
-double Polynomial::operator[](int index) {
+double& Polynomial::operator[](int index) {
 	if ( index >= 0 && index <= degree ) {
 		return coefficients[index];
 	}
 	else {
-		return 0;
+		throw OutOfRange();
 	}
 }
 
@@ -141,7 +160,12 @@ void Polynomial::setDegree(int deg) {
 	if ( deg != degree && deg >= 0 ) {
 		if ( degree >= 0 ) {
 			double* temp = coefficients;
-			coefficients = new double[deg+1];
+			try {
+				coefficients = new double[deg+1];
+			}
+			catch( std::bad_alloc ) {
+				throw NoMemory();
+			}
 			if ( deg < degree ) {
 				for ( int i = 0; i <= deg; i++ ) {
 					coefficients[i] = temp[i];
@@ -164,7 +188,12 @@ void Polynomial::setDegree(int deg) {
 		}
 		else {
 			degree = deg;
-			coefficients = new double[degree+1];
+			try {
+				coefficients = new double[degree+1];
+			}
+			catch( std::bad_alloc ) {
+				throw NoMemory();
+			}
 			for ( int i = 0; i < degree; i++ ) {
 				coefficients[i] = 0;
 			}
