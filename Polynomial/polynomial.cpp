@@ -1,9 +1,5 @@
 #include "polynomial.h"
 
-#include <iostream>
-#include <cstdlib>
-using namespace std;
-
 #define NULL 0
 
 // create the zero polynomial
@@ -121,7 +117,6 @@ Polynomial Polynomial::operator*(const Polynomial &right) {
 		total = 0;
 		for ( int j = 0; j <= i; j++ ) {
 			if ( right.degree >= i-j ) {
-				//cerr << (*this)[j] * right.coefficients[i-j] << endl;
 				total += ((*this)[j] * right.coefficients[i-j]);
 			}
 		}
