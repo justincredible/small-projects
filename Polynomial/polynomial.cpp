@@ -1,4 +1,6 @@
 #include <new>
+#include <algorithm>
+#include <iostream>
 #include "polynomial.h"
 
 #define NULL 0
@@ -61,7 +63,10 @@ Polynomial::Polynomial(const Polynomial &original) {
 
 // deallocate memory for coefficients
 Polynomial::~Polynomial() {
-	delete [] coefficients;
+	if ( coefficients != NULL ) {
+		delete [] coefficients;
+		coefficients = NULL;
+	}
 }
 
 // assigns a polynomial to another one
@@ -70,14 +75,16 @@ Polynomial Polynomial::operator=(const Polynomial &right) {
 		delete [] this->coefficients;
 	}
 	this->degree = right.degree;
-	try {
-		this->coefficients = new double[this->degree+1];
-	}
-	catch( std::bad_alloc ) {
-		throw NoMemory();
-	}
-	for ( int i = 0; i <= this->degree; i++ ) {
-		this->coefficients[i] = right.coefficients[i];
+	if ( this->degree >= 0 ) {
+		try {
+			this->coefficients = new double[this->degree+1];
+		}
+		catch( std::bad_alloc ) {
+			throw NoMemory();
+		}
+		for ( int i = 0; i <= this->degree; i++ ) {
+			this->coefficients[i] = right.coefficients[i];
+		}
 	}
 	return *this;
 }
@@ -134,10 +141,10 @@ Polynomial Polynomial::operator*(const Polynomial &right) {
 	for ( int i = 0; i <= index; i++ ) {
 		total = 0;
 		// inner loop adds the coefficients of all terms with degree i. 
-		for ( int j = 0; j <= i; j++ ) {
-			if ( this->degree >=j && right.degree >= i-j ) {
-				total += (*this)[j] * right.coefficients[i-j];
-			}
+		for ( int j = std::max(i-right.degree, 0);
+			  j <= std::min(this->degree, i);
+			  j++ ) {
+			total += (*this)[j] * right.coefficients[i-j];
 		}
 		result[i] = total;
 	}
