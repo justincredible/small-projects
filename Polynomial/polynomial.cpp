@@ -1,9 +1,15 @@
 #include <new>
 #include <algorithm>
+#include <stdexcept>
 #include <iostream>
 #include "polynomial.h"
 
 #define NULL 0
+
+
+/*********************
+ * {con,de}structor(s)
+ *********************/
 
 // create the zero polynomial
 Polynomial::Polynomial() {
@@ -68,6 +74,11 @@ Polynomial::~Polynomial() {
 		coefficients = NULL;
 	}
 }
+
+
+/**********************
+ * overloaded operators
+ **********************/
 
 // assigns a polynomial to another one
 Polynomial Polynomial::operator=(const Polynomial &right) {
@@ -151,7 +162,7 @@ Polynomial Polynomial::operator*(const Polynomial &right) {
 	return result;
 }
 
-// fetches coefficients without calling the accessor
+// accesses and/or mutates coefficient of degree index
 double& Polynomial::operator[](int index) {
 	if ( index >= 0 && index <= degree ) {
 		return coefficients[index];
@@ -160,6 +171,11 @@ double& Polynomial::operator[](int index) {
 		throw OutOfRange();
 	}
 }
+
+
+/************************
+ * mutators and accessors
+ ************************/
 
 // changes the degree and adjusts the coefficients accordingly
 void Polynomial::setDegree(int deg) {
@@ -237,4 +253,19 @@ double Polynomial::getCoefficient(int index) {
 			return 0;
 		}
 	}
+}
+
+
+/*************************
+ * miscellaneous functions
+ *************************/
+
+// evaluate polynomial at a point via Horner's method
+double Polynomial::evaluate(const double point) {
+	double result = (*this)[this->degree];
+	for ( int i = this->degree - 1; i >= 0; i-- ) {
+		result *= point;
+		result += (*this)[i];
+	}
+	return result;
 }

@@ -1,12 +1,19 @@
 #ifndef _POLYNOMIAL_H
 #define _POLYNOMIAL_H
 
+/* TODO:
+	ERROR CHECKING:
+		overflow/underflow
+	euclidean division
+	dynamic memory optimization
+*/
+
 class Polynomial {
 private:
 	int degree;
 	double* coefficients;
 public:
-	// {Con,De}structor(s)
+	// {con,de}structor(s)
 	Polynomial();
 	Polynomial(const int);
 	Polynomial(const int, double*);
@@ -22,11 +29,13 @@ public:
 	Polynomial operator+(const Polynomial &);
 	Polynomial operator*(const Polynomial &);
 	double& operator[](int);
-	// mutators and accessor functions
+	// mutators and accessors
 	void setDegree(int);
 	void setCoefficient(int, double);
 	int getDegree();
 	double getCoefficient(int);
+	// miscellaneous functions
+	double evaluate(const double);
 };
 
 #endif
