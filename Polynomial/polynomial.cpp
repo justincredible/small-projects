@@ -1,6 +1,7 @@
 #include <new>
+#include <cmath>
 #include <algorithm>
-#include <stdexcept>
+#include <limits>
 #include <iostream>
 #include "polynomial.h"
 
@@ -34,6 +35,10 @@ Polynomial::Polynomial(const int deg) {
 		}
 		coefficients[degree] = 1;
 	}
+	else {
+		degree = -1;
+		coefficients = NULL;
+	}
 }
 
 // create a polynomial of degree deg with predetermined coefficients
@@ -51,19 +56,28 @@ Polynomial::Polynomial(const int deg, double *arr) {
 			coefficients[i] = arr[i];
 		}
 	}
+	else {
+		degree = -1;
+		coefficients = NULL;
+	}
 }
 
 // create a polynomial identical to one that is already instantiated
 Polynomial::Polynomial(const Polynomial &original) {
 	degree = original.degree;
-	try {
-		coefficients = new double[degree+1];
+	if ( degree >= 0 ) {
+		try {
+			coefficients = new double[degree+1];
+		}
+		catch( std::bad_alloc ) {
+			throw NoMemory();
+		}
+		for ( int i = 0; i <= degree; i++ ) {
+			coefficients[i] = original.coefficients[i];
+		}
 	}
-	catch( std::bad_alloc ) {
-		throw NoMemory();
-	}
-	for ( int i = 0; i <= degree; i++ ) {
-		coefficients[i] = original.coefficients[i];
+	else {
+		coefficients = NULL;
 	}
 }
 
@@ -110,10 +124,22 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
 		Polynomial result(*this);
 		return result;
 	}
+	double sum;
 	if ( this->degree < right.degree ) {
 		Polynomial result(right.degree);
 		for ( int i = 0; i <= this->degree; i++ ) {
-			result[i] = this->coefficients[i] + right.coefficients[i];
+			sum = this->coefficients[i] + right.coefficients[i];
+			// essentially equal to 0 test
+			// source: http://stackoverflow.com/questions/17333/most-effective-way-for-float-and-double-comparison
+			if ( fabs(sum) <= 
+				 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
+				 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
+				 std::numeric_limits<double>::epsilon() ) {
+				result[i] = 0;
+			}
+			else {
+				result[i] = sum;
+			}
 		}
 		for ( int i = this->degree+1; i <= right.degree; i++ ) {
 			result[i] = right.coefficients[i];
@@ -124,16 +150,77 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
 		int index = this->degree;
 		Polynomial result(index);
 		for ( int i = 0; i <= right.degree; i++ ) {
-			result[i] = this->coefficients[i] + right.coefficients[i];
+			sum = this->coefficients[i] + right.coefficients[i];
+			if ( fabs(sum) <= 
+				 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
+				 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
+				 std::numeric_limits<double>::epsilon() ) {
+				result[i] = 0;
+			}
+			else {
+				result[i] = sum;
+			}
 		}
 		for ( int i = right.degree+1; i <= index; i++ ) {
 			result[i] = this->coefficients[i];
 		}
-		if ( result.getCoefficient(index) == 0 ) {
-			do {
-					index--;
-			} while ( index >= 0 && result.getCoefficient(index) == 0 );
-			result.setDegree(index);
+		if ( result[index] == 0 ) {
+			result.clean();
+		}
+		return result;
+	}
+}
+
+// subtracts two polynomials
+Polynomial Polynomial::operator-(const Polynomial &right) {
+	if ( this->degree == -1 ) {
+		Polynomial result(right);
+		return result;
+	}
+	if ( right.degree == -1 ) {
+		Polynomial result(*this);
+		return result;
+	}
+	double diff;
+	if ( this->degree < right.degree ) {
+		Polynomial result(right.degree);
+		for ( int i = 0; i <= this->degree; i++ ) {
+			diff = this->coefficients[i] - right.coefficients[i];
+			if ( fabs(diff) <= 
+				 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
+				 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
+				 std::numeric_limits<double>::epsilon() ) {
+				result[i] = 0;
+			}
+			else {
+				result[i] = diff;
+			}
+		}
+		for ( int i = this->degree+1; i <= right.degree; i++ ) {
+			result[i] = -right.coefficients[i];
+		}
+		return result;
+	}
+	else {
+		int index = this->degree;
+		Polynomial result(index);
+		for ( int i = 0; i <= right.degree; i++ ) {
+			diff = this->coefficients[i] - right.coefficients[i];
+			if ( fabs(diff) <= 
+				 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
+				 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
+				 std::numeric_limits<double>::epsilon() ) {
+				result[i] = 0;
+			}
+			else {
+				result[i] = diff;
+			}
+		}
+		for ( int i = right.degree+1; i <= index; i++ ) {
+			result[i] = this->coefficients[i];
+		}
+		if ( result[index] == 0 ) {
+			result.clean();
 		}
 		return result;
 	}
@@ -162,6 +249,30 @@ Polynomial Polynomial::operator*(const Polynomial &right) {
 	return result;
 }
 
+// divides two polynomials and returns the quotient
+Polynomial Polynomial::operator/(const Polynomial &right) {
+	if ( this->degree == -1 ) {
+		return *this;
+	}
+	if ( right.degree == -1 ) {
+		throw DivideByZero();
+	}
+	EuclidPair result = EuclideanDivision(*this, right);
+	return result.quotient;
+}
+
+// divides two polynomials and returns the remainder
+Polynomial Polynomial::operator%(const Polynomial &right) {
+	if ( this->degree == -1 ) {
+		return *this;
+	}
+	if ( right.degree == -1 ) {
+		throw DivideByZero();
+	}
+	EuclidPair result = EuclideanDivision(*this, right);
+	return result.remainder;
+}
+
 // accesses and/or mutates coefficient of degree index
 double& Polynomial::operator[](int index) {
 	if ( index >= 0 && index <= degree ) {
@@ -172,6 +283,31 @@ double& Polynomial::operator[](int index) {
 	}
 }
 
+// determines whether two polynomials have the same degrees and coefficients
+bool Polynomial::operator==(const Polynomial &right) {
+	if ( this->degree != right.degree ) {
+		return false;
+	}
+	for ( int i = 0; i <= this->degree; i++ ) {
+		if ( (*this)[i] != right.coefficients[i] ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// determines whether two polynomials have different degrees or coefficients
+bool Polynomial::operator!=(const Polynomial &right) {
+	if ( this->degree != right.degree ) {
+		return true;
+	}
+	for ( int i = 0; i <= this->degree; i++ ) {
+		if ( (*this)[i] != right.coefficients[i] ) {
+			return true;
+		}
+	}
+	return false;
+}
 
 /************************
  * mutators and accessors
@@ -179,48 +315,58 @@ double& Polynomial::operator[](int index) {
 
 // changes the degree and adjusts the coefficients accordingly
 void Polynomial::setDegree(int deg) {
-	// test that deg is valid and will actually change degree
-	if ( deg != degree && deg >= 0 ) {
-		if ( degree >= 0 ) {
-			double* temp = coefficients;
-			try {
-				coefficients = new double[deg+1];
-			}
-			catch( std::bad_alloc ) {
-				throw NoMemory();
-			}
-			if ( deg < degree ) {
-				for ( int i = 0; i <= deg; i++ ) {
-					coefficients[i] = temp[i];
+	if ( deg != degree ) {
+		if ( deg >= 0 ) {
+			if ( degree >= 0 ) {
+				double* temp = coefficients;
+				try {
+					coefficients = new double[deg+1];
 				}
-				if ( coefficients[degree] == 0 ) {
-					coefficients[degree] = 1;
+				catch( std::bad_alloc ) {
+					throw NoMemory();
 				}
-				delete [] temp;
+				if ( deg < degree ) {
+					degree = deg;
+					for ( int i = 0; i <= degree; i++ ) {
+						coefficients[i] = temp[i];
+					}
+					if ( coefficients[degree] == 0 ) {
+						coefficients[degree] = 1;
+					}
+					delete [] temp;
+				}
+				else {
+					for ( int i = 0; i <= degree; i++ ) {
+						coefficients[i] = temp[i];
+					}
+					for ( int i = degree+1; i < deg; i++ ) {
+						coefficients[i] = 0;
+					}
+					coefficients[deg] = 1;
+					degree = deg;
+					delete [] temp;
+				}
 			}
 			else {
-				for ( int i = 0; i <= degree; i++ ) {
-					coefficients[i] = temp[i];
+				degree = deg;
+				try {
+					coefficients = new double[degree+1];
 				}
-				for ( int i = degree+1; i < deg; i++ ) {
+				catch( std::bad_alloc ) {
+					throw NoMemory();
+				}
+				for ( int i = 0; i < degree; i++ ) {
 					coefficients[i] = 0;
 				}
-				coefficients[deg] = 1;
-				delete [] temp;
+				coefficients[degree] = 1;
 			}
 		}
 		else {
-			degree = deg;
-			try {
-				coefficients = new double[degree+1];
+			if ( degree >= 0 ) {
+				delete [] coefficients;
 			}
-			catch( std::bad_alloc ) {
-				throw NoMemory();
-			}
-			for ( int i = 0; i < degree; i++ ) {
-				coefficients[i] = 0;
-			}
-			coefficients[degree] = 1;
+			degree = -1;
+			coefficients = NULL;
 		}
 	}
 }
@@ -256,9 +402,9 @@ double Polynomial::getCoefficient(int index) {
 }
 
 
-/*************************
- * miscellaneous functions
- *************************/
+/*************************************
+ * miscellaneous and private functions
+ *************************************/
 
 // evaluate polynomial at a point via Horner's method
 double Polynomial::evaluate(const double point) {
@@ -268,4 +414,66 @@ double Polynomial::evaluate(const double point) {
 		result += (*this)[i];
 	}
 	return result;
+}
+
+// divides two polynomials to obtain a Euclid pair
+EuclidPair Polynomial::EuclideanDivision(const Polynomial &left,
+										 const Polynomial &right) {
+	EuclidPair result;
+	if ( left.degree < right.degree ) {
+		result.remainder = left;
+		return result;
+	}
+	else {
+		int index = left.degree - right.degree;
+		result.quotient.setDegree(index);
+		Polynomial dividend(left), divisor(right);
+		while ( dividend.degree >= divisor.degree ) {
+			result.quotient[index] = 
+				dividend[dividend.degree]/divisor[divisor.degree];
+			divisor = result.quotient.subterm(index) * divisor;
+			dividend = dividend - divisor;
+			if ( dividend.degree == index + right.degree ) {
+				dividend[dividend.degree] = 0;
+				dividend.clean();
+			}
+			divisor = right;
+			// if ( dividend.degree - divisor.degree == index ) error;
+			index = dividend.degree - divisor.degree;
+		}
+		result.remainder = dividend;
+		return result;
+	}
+}
+
+// creates a polynomial identical to a single term of the caller
+Polynomial Polynomial::subterm(int degree) {
+	Polynomial result;
+	result.setDegree(degree);
+	result[degree] = (*this)[degree];
+	return result;
+}
+
+// resets the degree if leading coefficients are 0
+void Polynomial::clean() {
+	int index = this->degree;
+	while ( index >= 0 && (*this)[index] == 0  ) {
+		index--;
+	}
+	this->setDegree(index);
+}
+
+
+/*********
+ * friends
+ *********/
+
+// outputs a polynomial as a line: degree tab_char coefficients 0 to degree
+std::ostream& operator<<(std::ostream &out, Polynomial &poly) {
+	out << poly.degree << "\t";
+	for ( int i = 0; i <= poly.degree; i++ ) {
+		out << " " << poly[i];
+	}
+	out << std::endl;
+	return out;
 }
