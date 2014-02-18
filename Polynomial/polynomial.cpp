@@ -171,59 +171,16 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
 	}
 }
 
-// subtracts two polynomials
+// subtracts two polynomials via summation with the additive inverse
 Polynomial Polynomial::operator-(const Polynomial &right) {
-	if ( this->degree == -1 ) {
-		Polynomial result(right);
-		return result;
-	}
 	if ( right.degree == -1 ) {
 		Polynomial result(*this);
 		return result;
 	}
-	double diff;
-	if ( this->degree < right.degree ) {
-		Polynomial result(right.degree);
-		for ( int i = 0; i <= this->degree; i++ ) {
-			diff = this->coefficients[i] - right.coefficients[i];
-			if ( fabs(diff) <= 
-				 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
-				 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
-				 std::numeric_limits<double>::epsilon() ) {
-				result[i] = 0;
-			}
-			else {
-				result[i] = diff;
-			}
-		}
-		for ( int i = this->degree+1; i <= right.degree; i++ ) {
-			result[i] = -right.coefficients[i];
-		}
-		return result;
-	}
-	else {
-		int index = this->degree;
-		Polynomial result(index);
-		for ( int i = 0; i <= right.degree; i++ ) {
-			diff = this->coefficients[i] - right.coefficients[i];
-			if ( fabs(diff) <= 
-				 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
-				 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
-				 std::numeric_limits<double>::epsilon() ) {
-				result[i] = 0;
-			}
-			else {
-				result[i] = diff;
-			}
-		}
-		for ( int i = right.degree+1; i <= index; i++ ) {
-			result[i] = this->coefficients[i];
-		}
-		if ( result[index] == 0 ) {
-			result.clean();
-		}
-		return result;
-	}
+	Polynomial result, negative(0);
+	negative[0] = -1;
+	result = *this + negative * right;
+	return result;
 }
 
 // multiplies two polynomials
