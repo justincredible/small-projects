@@ -36,17 +36,17 @@ public:
     class DivideByZero {
     };
     // overloaded operators
-    Polynomial operator=(const Polynomial &);
+    Polynomial& operator=(const Polynomial &);
     Polynomial operator+(const Polynomial &);
     Polynomial operator-(const Polynomial &);
     Polynomial operator*(const Polynomial &);
     Polynomial operator/(const Polynomial &);
     Polynomial operator%(const Polynomial &);
-    Polynomial operator+=(const Polynomial &);
-    Polynomial operator-=(const Polynomial &);
-    Polynomial operator*=(const Polynomial &);
-    Polynomial operator/=(const Polynomial &);
-    Polynomial operator%=(const Polynomial &);
+    Polynomial& operator+=(const Polynomial &);
+    Polynomial& operator-=(const Polynomial &);
+    Polynomial& operator*=(const Polynomial &);
+    Polynomial& operator/=(const Polynomial &);
+    Polynomial& operator%=(const Polynomial &);
     friend std::ostream& operator<<(std::ostream &, Polynomial &);
     double& operator[](int);
     bool operator==(const Polynomial &);

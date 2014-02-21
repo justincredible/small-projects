@@ -98,7 +98,7 @@ Polynomial::Polynomial(const Polynomial &original) {
 
 // deallocate memory for coefficients
 Polynomial::~Polynomial() {
-    if ( coefficients != NULL ) {
+    if ( !coefficients ) {
         delete [] coefficients;
         coefficients = NULL;
     }
@@ -110,9 +110,9 @@ Polynomial::~Polynomial() {
  **********************/
 
 // assigns a polynomial to another one
-Polynomial Polynomial::operator=(const Polynomial &right) {
+Polynomial& Polynomial::operator=(const Polynomial &right) {
     if ( *this != right ) {
-        if ( this->degree >= 0 ) {
+        if ( !this->coefficients ) {
             delete [] this->coefficients;
         }
         this->degree = right.degree;
@@ -135,12 +135,10 @@ Polynomial Polynomial::operator=(const Polynomial &right) {
 // adds two polynomials
 Polynomial Polynomial::operator+(const Polynomial &right) {
     if ( this->degree == -1 ) {
-        Polynomial result(right);
-        return result;
+        return right;
     }
     if ( right.degree == -1 ) {
-        Polynomial result(*this);
-        return result;
+        return *this;
     }
     double sum;
     if ( this->degree < right.degree ) {
@@ -153,14 +151,14 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
                  ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
                  fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
                  std::numeric_limits<double>::epsilon() ) {
-                result[i] = 0;
+                result.coefficients[i] = 0;
             }
             else {
-                result[i] = sum;
+                result.coefficients[i] = sum;
             }
         }
         for ( int i = this->degree+1; i <= right.degree; i++ ) {
-            result[i] = right.coefficients[i];
+            result.coefficients[i] = right.coefficients[i];
         }
         return result;
     }
@@ -173,16 +171,16 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
                  ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
                  fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
                  std::numeric_limits<double>::epsilon() ) {
-                result[i] = 0;
+                result.coefficients[i] = 0;
             }
             else {
-                result[i] = sum;
+                result.coefficients[i] = sum;
             }
         }
         for ( int i = right.degree+1; i <= index; i++ ) {
-            result[i] = this->coefficients[i];
+            result.coefficients[i] = this->coefficients[i];
         }
-        if ( result[index] == 0 ) {
+        if ( result.coefficients[index] == 0 ) {
             result.simplify();
         }
         return result;
@@ -192,8 +190,7 @@ Polynomial Polynomial::operator+(const Polynomial &right) {
 // subtracts two polynomials via summation with the additive inverse
 Polynomial Polynomial::operator-(const Polynomial &right) {
     if ( right.degree == -1 ) {
-        Polynomial result(*this);
-        return result;
+        return *this;
     }
     Polynomial result, negative(0);
     negative[0] = -1;
@@ -219,7 +216,7 @@ Polynomial Polynomial::operator*(const Polynomial &right) {
               j++ ) {
             total += this->coefficients[j] * right.coefficients[i-j];
         }
-        result[i] = total;
+        result.coefficients[i] = total;
     }
     return result;
 }
@@ -252,19 +249,19 @@ Polynomial Polynomial::operator%(const Polynomial &right) {
  * The following functions are not meant to be efficient, I only include them
  * for completeness.
  */
-Polynomial Polynomial::operator+=(const Polynomial &right) {
+Polynomial& Polynomial::operator+=(const Polynomial &right) {
     return *this = *this + right;
 }
-Polynomial Polynomial::operator-=(const Polynomial &right) {
+Polynomial& Polynomial::operator-=(const Polynomial &right) {
     return *this = *this - right;
 }
-Polynomial Polynomial::operator*=(const Polynomial &right) {
+Polynomial& Polynomial::operator*=(const Polynomial &right) {
     return *this = *this * right;
 }
-Polynomial Polynomial::operator/=(const Polynomial &right) {
+Polynomial& Polynomial::operator/=(const Polynomial &right) {
     return *this = *this / right;
 }
-Polynomial Polynomial::operator%=(const Polynomial &right) {
+Polynomial& Polynomial::operator%=(const Polynomial &right) {
     return *this = *this % right;
 }
 
@@ -284,7 +281,7 @@ bool Polynomial::operator==(const Polynomial &right) {
         return false;
     }
     for ( int i = 0; i <= this->degree; i++ ) {
-        if ( (*this)[i] != right.coefficients[i] ) {
+        if ( this->coefficients[i] != right.coefficients[i] ) {
             return false;
         }
     }
@@ -297,7 +294,7 @@ bool Polynomial::operator!=(const Polynomial &right) {
         return true;
     }
     for ( int i = 0; i <= this->degree; i++ ) {
-        if ( (*this)[i] != right.coefficients[i] ) {
+        if ( this->coefficients[i] != right.coefficients[i] ) {
             return true;
         }
     }
@@ -404,10 +401,10 @@ double Polynomial::getCoefficient(int index) {
 
 // evaluate polynomial at a point via Horner's method
 double Polynomial::evaluate(const double point) {
-    double result = (*this)[this->degree];
+    double result = this->coefficients[this->degree];
     for ( int i = this->degree - 1; i >= 0; i-- ) {
         result *= point;
-        result += (*this)[i];
+        result += this->coefficients[i];
     }
     return result;
 }
@@ -429,10 +426,6 @@ EuclidPair Polynomial::EuclideanDivision(const Polynomial &left,
                 dividend[dividend.degree]/divisor[divisor.degree];
             divisor = result.quotient.subterm(index) * divisor;
             dividend = dividend - divisor;
-            if ( dividend.degree == index + right.degree ) {
-                dividend[dividend.degree] = 0;
-                dividend.simplify();
-            }
             divisor = right;
             // if ( dividend.degree - divisor.degree == index ) error;
             index = dividend.degree - divisor.degree;
@@ -446,14 +439,14 @@ EuclidPair Polynomial::EuclideanDivision(const Polynomial &left,
 Polynomial Polynomial::subterm(int degree) {
     Polynomial result;
     result.setDegree(degree);
-    result[degree] = (*this)[degree];
+    result.coefficients[degree] = this->coefficients[degree];
     return result;
 }
 
 // resets the degree if leading coefficients are 0
 void Polynomial::simplify() {
     int index = this->degree;
-    while ( index >= 0 && (*this)[index] == 0  ) {
+    while ( index >= 0 && this->coefficients[index] == 0  ) {
         index--;
     }
     this->setDegree(index);
