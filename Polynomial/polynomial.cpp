@@ -112,157 +112,140 @@ Polynomial::~Polynomial() {
 // assigns a polynomial to another one
 Polynomial& Polynomial::operator=(const Polynomial &right) {
     if ( *this != right ) {
-        if ( !this->coefficients ) {
-            delete [] this->coefficients;
-        }
-        this->degree = right.degree;
-        this->memory_scale = right.memory_scale;
-        if ( this->degree >= 0 ) {
-            try {
-                this->coefficients = new double[memory_scale*BASE];
-            }
-            catch( std::bad_alloc ) {
-                throw NoMemory();
-            }
-            for ( int i = 0; i <= this->degree; i++ ) {
-                this->coefficients[i] = right.coefficients[i];
-            }
+        this->setDegree(right.degree);
+        for ( int i = 0; i <= this->degree; i++ ) {
+            this->coefficients[i] = right.coefficients[i];
         }
     }
     return *this;
 }
 
-// adds two polynomials
-Polynomial Polynomial::operator+(const Polynomial &right) {
+// adds two polynomials and assigns value to the caller
+Polynomial& Polynomial::operator+=(const Polynomial &right) {
     if ( this->degree == -1 ) {
-        return right;
+        *this = right;
     }
-    if ( right.degree == -1 ) {
-        return *this;
-    }
-    double sum;
-    if ( this->degree < right.degree ) {
-        Polynomial result(right.degree);
-        for ( int i = 0; i <= this->degree; i++ ) {
-            sum = this->coefficients[i] + right.coefficients[i];
-            // essentially equal to 0 test
-            // source: http://stackoverflow.com/questions/17333/most-effective-way-for-float-and-double-comparison
-            if ( fabs(sum) <= 
-                 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
-                 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
-                 std::numeric_limits<double>::epsilon() ) {
-                result.coefficients[i] = 0;
+    else if ( right.degree != -1 ) {
+        double sum;
+        if ( this->degree < right.degree ) {
+            int old_degree = this->degree;
+            this->setDegree(right.degree);
+            for ( int i = 0; i <= old_degree; i++ ) {
+                sum = this->coefficients[i] + right.coefficients[i];
+                // essentially equal to 0 test
+                // source: http://stackoverflow.com/questions/17333/most-effective-way-for-float-and-double-comparison
+                if ( fabs(sum) <= (
+                     fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
+                     fabs(right.coefficients[i]) : fabs(this->coefficients[i]) 
+                     ) * std::numeric_limits<double>::epsilon() ) {
+                    this->coefficients[i] = 0;
+                }
+                else {
+                    this->coefficients[i] = sum;
+                }
             }
-            else {
-                result.coefficients[i] = sum;
-            }
-        }
-        for ( int i = this->degree+1; i <= right.degree; i++ ) {
-            result.coefficients[i] = right.coefficients[i];
-        }
-        return result;
-    }
-    else {
-        int index = this->degree;
-        Polynomial result(index);
-        for ( int i = 0; i <= right.degree; i++ ) {
-            sum = this->coefficients[i] + right.coefficients[i];
-            if ( fabs(sum) <= 
-                 ( fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
-                 fabs(right.coefficients[i]) : fabs(this->coefficients[i]) ) *
-                 std::numeric_limits<double>::epsilon() ) {
-                result.coefficients[i] = 0;
-            }
-            else {
-                result.coefficients[i] = sum;
+            for ( int i = old_degree+1; i <= right.degree; i++ ) {
+                this->coefficients[i] = right.coefficients[i];
             }
         }
-        for ( int i = right.degree+1; i <= index; i++ ) {
-            result.coefficients[i] = this->coefficients[i];
+        else {
+            for ( int i = 0; i <= right.degree; i++ ) {
+                sum = this->coefficients[i] + right.coefficients[i];
+                if ( fabs(sum) <= (
+                     fabs(this->coefficients[i]) > fabs(right.coefficients[i]) ?
+                     fabs(right.coefficients[i]) : fabs(this->coefficients[i]) 
+                     ) * std::numeric_limits<double>::epsilon() ) {
+                    this->coefficients[i] = 0;
+                }
+                else {
+                    this->coefficients[i] = sum;
+                }
+            }
+            this->simplify();
         }
-        if ( result.coefficients[index] == 0 ) {
-            result.simplify();
-        }
-        return result;
     }
+    return *this;
 }
 
-// subtracts two polynomials via summation with the additive inverse
-Polynomial Polynomial::operator-(const Polynomial &right) {
-    if ( right.degree == -1 ) {
+// multiplies two polynomials and assigns value to the caller
+Polynomial& Polynomial::operator*=(const Polynomial &right) {
+    if ( this->degree == -1 || right.degree == -1 ) {
+        this->setDegree(-1);
         return *this;
     }
-    Polynomial result, negative(0);
+    Polynomial left(*this);
+    this->setDegree(this->degree+right.degree);
+    double total;
+    for ( int i = 0; i <= this->degree; i++ ) {
+        total = 0;
+        for ( int j = std::max(i-right.degree, 0);
+              j <= std::min(left.degree, i);
+              j++ ) {
+            total += left.coefficients[j] * right.coefficients[i-j];
+        }
+        this->coefficients[i] = total;
+    }
+    return *this;
+}
+
+// subtracts two polynomials via addition with additive inverse and assigns
+// value to caller
+Polynomial& Polynomial::operator-=(const Polynomial &right) {
+    Polynomial negative(0);
     negative[0] = -1;
-    result = *this + negative * right;
-    return result;
+    return *this += negative *= right;
+}
+
+// divides two polynomials and assigns quotient to caller
+Polynomial& Polynomial::operator/=(const Polynomial &right) {
+    if ( this->degree == -1 ) {
+        return *this;
+    }
+    if ( right.degree == -1 ) {
+        throw DivideByZero();
+    }
+    return *this = (EuclideanDivision(*this, right)).quotient;
+}
+
+// divides two polynomials and assigns remainder to caller
+Polynomial& Polynomial::operator%=(const Polynomial &right) {
+    if ( this->degree == -1 ) {
+        return *this;
+    }
+    if ( right.degree == -1 ) {
+        throw DivideByZero();
+    }
+    return *this = (EuclideanDivision(*this, right)).remainder;
+}
+
+// adds two polynomials
+Polynomial Polynomial::operator+(const Polynomial &right) {
+    Polynomial result(*this);
+    return result += right;
 }
 
 // multiplies two polynomials
 Polynomial Polynomial::operator*(const Polynomial &right) {
-    if ( this->degree == -1 || right.degree == -1 ) {
-        Polynomial result;
-        return result;
-    }
-    int index = this->degree + right.degree;
-    Polynomial result(index);
-    double total;
-    // outer loop controls assignment to coefficients of result
-    for ( int i = 0; i <= index; i++ ) {
-        total = 0;
-        // inner loop adds the coefficients of all terms with degree i. 
-        for ( int j = std::max(i-right.degree, 0);
-              j <= std::min(this->degree, i);
-              j++ ) {
-            total += this->coefficients[j] * right.coefficients[i-j];
-        }
-        result.coefficients[i] = total;
-    }
-    return result;
+    Polynomial result(*this);
+    return result *= right;
+}
+
+// subtracts two polynomials
+Polynomial Polynomial::operator-(const Polynomial &right) {
+    Polynomial result(*this);
+    return result -= right;
 }
 
 // divides two polynomials and returns the quotient
 Polynomial Polynomial::operator/(const Polynomial &right) {
-    if ( this->degree == -1 ) {
-        return *this;
-    }
-    if ( right.degree == -1 ) {
-        throw DivideByZero();
-    }
-    EuclidPair result = EuclideanDivision(*this, right);
-    return result.quotient;
+    Polynomial result(*this);
+    return result /= right;
 }
 
 // divides two polynomials and returns the remainder
 Polynomial Polynomial::operator%(const Polynomial &right) {
-    if ( this->degree == -1 ) {
-        return *this;
-    }
-    if ( right.degree == -1 ) {
-        throw DivideByZero();
-    }
-    EuclidPair result = EuclideanDivision(*this, right);
-    return result.remainder;
-}
-
-/*
- * The following functions are not meant to be efficient, I only include them
- * for completeness.
- */
-Polynomial& Polynomial::operator+=(const Polynomial &right) {
-    return *this = *this + right;
-}
-Polynomial& Polynomial::operator-=(const Polynomial &right) {
-    return *this = *this - right;
-}
-Polynomial& Polynomial::operator*=(const Polynomial &right) {
-    return *this = *this * right;
-}
-Polynomial& Polynomial::operator/=(const Polynomial &right) {
-    return *this = *this / right;
-}
-Polynomial& Polynomial::operator%=(const Polynomial &right) {
-    return *this = *this % right;
+    Polynomial result(*this);
+    return result %= right;
 }
 
 // accesses and/or mutates coefficient of degree index

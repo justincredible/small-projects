@@ -4,7 +4,7 @@
 /* TODO:
     ERROR CHECKING:
         overflow/underflow
-    operators
+    reduce code for +=
     run code through lint
 */
 
@@ -37,16 +37,16 @@ public:
     };
     // overloaded operators
     Polynomial& operator=(const Polynomial &);
-    Polynomial operator+(const Polynomial &);
-    Polynomial operator-(const Polynomial &);
-    Polynomial operator*(const Polynomial &);
-    Polynomial operator/(const Polynomial &);
-    Polynomial operator%(const Polynomial &);
     Polynomial& operator+=(const Polynomial &);
     Polynomial& operator-=(const Polynomial &);
     Polynomial& operator*=(const Polynomial &);
     Polynomial& operator/=(const Polynomial &);
     Polynomial& operator%=(const Polynomial &);
+    Polynomial operator+(const Polynomial &);
+    Polynomial operator*(const Polynomial &);
+    Polynomial operator-(const Polynomial &);
+    Polynomial operator/(const Polynomial &);
+    Polynomial operator%(const Polynomial &);
     friend std::ostream& operator<<(std::ostream &, Polynomial &);
     double& operator[](int);
     bool operator==(const Polynomial &);
