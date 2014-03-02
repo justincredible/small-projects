@@ -2,9 +2,15 @@
 #define _POLYNOMIAL_H
 
 /* TODO:
+    ADDITION WORK:
+        factorization
+        power series
+    TESTING:
+        median
+        bounds
+        exceptions
     ERROR CHECKING:
         overflow/underflow
-        constructor with array aregument should ensure intended memory access is valid
     exceptions should provide information
     reduce code for +=
     simplify logic of setDegree()
@@ -19,6 +25,9 @@
  * pointer is used to store the coefficients of the polynomial in a dynamically
  * allocated array. one int stores the degree of the polynomial, while the
  * other is used internally to manage the memory allocated to the double*
+ *
+ * Dependency on a heap structure for the implementation. uses FibonacciHeap 
+ * structure
  *
  * Operations:
  *

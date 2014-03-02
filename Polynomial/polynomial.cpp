@@ -1,11 +1,11 @@
 #include <new>
 #include <cmath>
+#include <cstdlib>
 #include <algorithm>
 #include <limits>
 #include <iostream>
 #include "polynomial.h"
-
-#define NULL 0
+#include "FibonacciHeap.h"
 
 
 /*********************
@@ -51,8 +51,8 @@ Polynomial::Polynomial(const int deg) {
 
 // create a polynomial of degree deg with predetermined coefficients
 // throws NoMemory, OutOfRange exceptions
-Polynomial::Polynomial(const int deg, double *arr, int arr_size) {
-    if ( arr_size > deg ) {
+Polynomial::Polynomial(const int deg, double *arr, int size) {
+    if ( size > deg ) {
         if ( deg >= 0 ) {
             degree = deg;
             memory_scale = 1;
@@ -183,32 +183,89 @@ Polynomial& Polynomial::operator+=(const Polynomial &right) {
     return *this;
 }
 
-// multiplies two polynomials and assigns value to the caller
+// multiplies two polynomials and assigns value to the caller.
 Polynomial& Polynomial::operator*=(const Polynomial &right) {
     // the zero polynomial dominates multiplication
     if ( this->degree == -1 || right.degree == -1 ) {
         this->setDegree(-1);
         return *this;
     }
+    double diff;
     int old_degree = this->degree;
     this->setDegree(this->degree+right.degree);
-    double total;
+    FibHeap* pos = MakeHeap();
+    FibHeap* neg = MakeHeap();
+    FibNode* add = NULL; 
+    FibNode* drop = NULL;
     // if a.i is the ith coefficient of the caller and b.i the ith coefficient
     // of the argument, then a.i = a.i*b.0 + a.i-1*b.1 + . . . + a.0*b.i for
     // each 0 <= i <= this->degree + right.degree.
     // the loop counts down so that old coefficients are not overwritten before
     // they are no longer needed
     for ( int i = this->degree; i >= 0; i-- ) {
-        total = 0;
         // the max and min prevent attempts to access out of range values in
         // the arrays
-        for ( int j = std::max(i-right.degree, 0);
+        for ( int j = std::max(i-right.degree, 0); 
               j <= std::min(old_degree, i);
               j++ ) {
-            total += this->coefficients[j] * right.coefficients[i-j];
+            add = new FibNode;
+            add->key = this->coefficients[j] * right.coefficients[i-j];
+            if ( add->key > 0 ) {
+                Insert(pos,add);
+            }
+            else if ( add->key < 0 ) {
+                add->key = -add->key;
+                Insert(neg,add);
+            }
+            else {
+                delete add;
+            }
+            add = NULL;
         }
-        this->coefficients[i] = total;
+        // we compute the total by adding the two smallest iteratively
+        while ( pos->n > 1 ) {
+            add = ExtractMin(pos);
+            drop = ExtractMin(pos);
+            add->key += drop->key;
+            Insert(pos,add);
+            delete drop;
+        }
+        while ( neg->n > 1 ) {
+            add = ExtractMin(neg);
+            drop = ExtractMin(neg);
+            add->key += drop->key;
+            Insert(neg,add);
+            delete drop;
+        }
+        if ( pos->n > 0 && neg->n > 0 ) {
+            add = ExtractMin(pos);
+            drop = ExtractMin(neg);
+            diff = add->key - drop->key;
+            if ( fabs(diff) <= (add->key > drop->key ? drop->key : add->key) *
+                 std::numeric_limits<double>::epsilon() ) {
+                add->key = 0;
+            }
+            else {
+                add->key = diff;
+            }
+            delete drop;
+        }
+        else if ( pos->n > 0 ) {
+            add = ExtractMin(pos);
+        }
+        else if ( neg->n > 0 ) {
+            add = ExtractMin(neg);
+            add->key = -add->key;
+        }
+        else {
+            add = new FibNode;
+            add->key = 0;
+        }
+        this->coefficients[i] = add->key;
+        delete add;
     }
+    delete pos;
+    delete neg;
     return *this;
 }
 
