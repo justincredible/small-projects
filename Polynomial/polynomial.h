@@ -107,7 +107,7 @@ private:
     int degree;
     int memory_scale;
     double* coefficients;
-    // private functions
+protected:
     EuclidPair EuclideanDivision(const Polynomial &, const Polynomial &);
     Polynomial subterm(int);
     void simplify();

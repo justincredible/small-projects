@@ -5,7 +5,7 @@
 #include <limits>
 #include <iostream>
 #include "polynomial.h"
-#include "FibonacciHeap.h"
+#include "FibHeap.h"
 
 
 /*********************
@@ -190,13 +190,11 @@ Polynomial& Polynomial::operator*=(const Polynomial &right) {
         this->setDegree(-1);
         return *this;
     }
-    double diff;
     int old_degree = this->degree;
     this->setDegree(this->degree+right.degree);
-    FibHeap* pos = MakeHeap();
-    FibHeap* neg = MakeHeap();
-    FibNode* add = NULL; 
-    FibNode* drop = NULL;
+    FibHeap<double> pos;
+    FibHeap<double> neg;
+    double product, sum;
     // if a.i is the ith coefficient of the caller and b.i the ith coefficient
     // of the argument, then a.i = a.i*b.0 + a.i-1*b.1 + . . . + a.0*b.i for
     // each 0 <= i <= this->degree + right.degree.
@@ -208,64 +206,47 @@ Polynomial& Polynomial::operator*=(const Polynomial &right) {
         for ( int j = std::max(i-right.degree, 0); 
               j <= std::min(old_degree, i);
               j++ ) {
-            add = new FibNode;
-            add->key = this->coefficients[j] * right.coefficients[i-j];
-            if ( add->key > 0 ) {
-                Insert(pos,add);
+            product = this->coefficients[j] * right.coefficients[i-j];
+            if ( product > 0 ) {
+                pos.insert(product);
             }
-            else if ( add->key < 0 ) {
-                add->key = -add->key;
-                Insert(neg,add);
+            else if ( product < 0 ) {
+                product = -product;
+                neg.insert(product);
             }
-            else {
-                delete add;
-            }
-            add = NULL;
         }
         // we compute the total by adding the two smallest iteratively
-        while ( pos->n > 1 ) {
-            add = ExtractMin(pos);
-            drop = ExtractMin(pos);
-            add->key += drop->key;
-            Insert(pos,add);
-            delete drop;
+        while ( pos.size() > 1 ) {
+            sum = pos.extractMin();
+            sum += pos.extractMin();
+            pos.insert(sum);
         }
-        while ( neg->n > 1 ) {
-            add = ExtractMin(neg);
-            drop = ExtractMin(neg);
-            add->key += drop->key;
-            Insert(neg,add);
-            delete drop;
+        while ( neg.size() > 1 ) {
+            sum = neg.extractMin();
+            sum += neg.extractMin();
+            neg.insert(sum);
         }
-        if ( pos->n > 0 && neg->n > 0 ) {
-            add = ExtractMin(pos);
-            drop = ExtractMin(neg);
-            diff = add->key - drop->key;
-            if ( fabs(diff) <= (add->key > drop->key ? drop->key : add->key) *
+        if ( pos.size() > 0 && neg.size() > 0 ) {
+            sum = pos.min();
+            sum -= neg.min();
+            if ( fabs(sum) <= (pos.min() > neg.min() ? neg.min() : pos.min()) *
                  std::numeric_limits<double>::epsilon() ) {
-                add->key = 0;
+                sum = 0;
             }
-            else {
-                add->key = diff;
-            }
-            delete drop;
+            pos.extractMin();
+            neg.extractMin();
         }
-        else if ( pos->n > 0 ) {
-            add = ExtractMin(pos);
+        else if ( pos.size() > 0 ) {
+            sum = pos.extractMin();
         }
         else if ( neg->n > 0 ) {
-            add = ExtractMin(neg);
-            add->key = -add->key;
+            sum = -neg.extractMin();
         }
         else {
-            add = new FibNode;
-            add->key = 0;
+            sum = 0;
         }
-        this->coefficients[i] = add->key;
-        delete add;
+        this->coefficients[i] = sum;
     }
-    delete pos;
-    delete neg;
     return *this;
 }
 
