@@ -30,17 +30,9 @@ protected:
 	    FibonacciNode* child;
 	    unsigned int degree;
 
-        FibonacciNode() { 
-            key = C();
-            mark = 0;
+        FibonacciNode() : key() mark() degree() p(left(right(child()))) {}
+        FibonacciNode(C value) : key(value), mark(), degree() {
             p = left = right = child = 0;
-            degree = 0;
-        }
-        FibonacciNode(C value) {
-            key = value;
-            mark = 0;
-            p = left = right = child = 0;
-            degree = 0;
         }
     };
 
@@ -50,10 +42,7 @@ protected:
 	    unsigned int n;
 	    FibonacciNode<C>* min;
 
-        FibonacciHeap() {
-            n = 0;
-            min = 0;
-        }
+        FibonacciHeap() : n(), min() {}
     };
 
     // OPERATIONS
@@ -520,21 +509,19 @@ public:
     // CONSTRUCTORS
     FibHeap() : heap(MakeHeap()) {}
 
-    FibHeap(T* array, int size) {
+    FibHeap(T* array, int size) : heap(MakeHeap()) {
         FibonacciNode<T>* node;
-        heap = MakeHeap();
         for ( int i = 0; i < size; i++ ) {
             node = new FibonacciNode<T>(array[i]);
             Insert(heap,node);
         }
     }
 
-    FibHeap(FibHeap &H) {
+    FibHeap(FibHeap &H) : heap(MakeHeap()) {
         FibonacciNode<T>* node;
         while ( H.size() > 0 ) {
             H.storeMin();
         }
-        heap = MakeHeap();
         while ( H.en_count() > 0 ) {
             node = new FibonacciNode<T>(H.en_valueLast());
             Insert(heap,node);
