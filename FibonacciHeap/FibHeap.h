@@ -1,8 +1,8 @@
 #ifndef FIBONACCIHEAP_H_
 #define FIBONACCIHEAP_H_
 
-#include <cmath>
 #include <cstdlib>
+#include <cmath>
 #include <limits>
 #include <deque>
 
@@ -164,7 +164,7 @@ protected:
      * 4. 		add x to the root list of H
      * 5. 		x.p = NULL
      * 6. 	remove z from the root list of H
-     * 7.		if z == z.right
+     * 7.   if z == z.right
      * 8. 		H.min = NULL
      * 9. 	else H.min = z.right
      *10. 		CONSOLIDATE(H)
@@ -523,30 +523,38 @@ public:
             H.storeMin();
         }
         while ( H.en_count() > 0 ) {
-            node = new FibonacciNode<T>(H.en_valueLast());
+            node = new FibonacciNode<T>(H[0]);
             Insert(heap,node);
-            H.en_insertLast();
+            H.en_insertFirst();
         }
     }
 
     // DESTRUCTOR
     FibHeap<T>::~FibHeap() {
+        while ( !nodes.empty() ) {
+            delete nodes.front();
+            nodes.pop_front();
+        }
         while ( heap->min && heap->n ) {
             delete ExtractMin(heap);
         }
         delete heap;
     }
 
+    // NUMBER OF NODES
+    // returns min{# nodes in heap, INT_MAX}
     int size() { return static_cast<int>(heap->n) >= 0 ? 
                         static_cast<int>(heap->n) :
                         numeric_limits<int>::max();
     }
 
-    int en_count() { return nodes.size(); }
+    // returns min{# non-heap nodes, INT_MAX}
+    int en_count() { return static_cast<int>(nodes.size()) >= 0 ?
+                            static_cast<int>(nodes.size()) :
+                            numeric_limits<int>::max();
+    }
 
-    T en_valueFirst() { return nodes.first()->key; }
-    T en_valueLast() { return nodes.back()->key; }
-
+    // NON-HEAP MANIPULATION
     void en_insertFirst() {
         Insert(heap, nodes.front());
         nodes.pop_front();
@@ -557,18 +565,26 @@ public:
         nodes.pop_back();
     }
 
-    // places a new node at the end of the queue
-    void store(T value) {
-        nodes.push_back(new FibonacciNode<T>(value));
+    void en_removeFirst() {
+        delete nodes.front();
+        nodes.pop_front();
     }
 
-    // places the minimum of the heap into the queue
+    void en_removeLast() {
+        delete nodes.back();
+        nodes.pop_back();
+    }
+
+    // places a new node at the end of the queue
+    void store(T value) { nodes.push_back(new FibonacciNode<T>(value)); }
+
+    // places the minimum of the heap at the end of the queue
     void storeMin() { nodes.push_back(ExtractMin(heap)); }
 
+    // HEAP FUNCTIONS
+    // places a new node in the heap
     void insert(T value) {
-        nodes.push_front(new FibonacciNode<T>(value));
-        Insert(heap, nodes.front());
-        nodes.pop_front();
+        Insert(heap, new FibonacciNode<T>(value));
     }
 
     // extracts the minimum value still in the heap
@@ -586,8 +602,13 @@ public:
         return value;
     }
 
+    // OVERLOADED OPERATORS
+    // provides a reference to key of the external node at position index ( mod
+    // nodes.size() )
     T& operator[](int index) {
-        return nodes[index]->key;
+        if ( !nodes.empty() ) {
+            return nodes[index%this->en_count()]->key;
+        }
     }
 
 };

@@ -65,6 +65,21 @@ int main(int argc,char** argv) {
         assert(H1.extractMin() == H3[i] && H2.extractMin() == H3[i]);
     }
     count++;
+    // [] provides access to the node's key
+    for ( int i = 0; i < H3.en_count(); i++ ) {
+        H1.insert(H3[i]);
+    }
+    H3[H3.en_count()-1] = 7;
+    for ( int i = 0; i < ARR_SIZE; i++ ) {
+        assert(H1.extractMin() == H3[0] || H3[0] == 7 );
+        H3.en_removeFirst();
+    }
+    count++;
+    // check the sizes are correct
+    assert(H1.size() == 0 && H3.size() == 0 && H3.en_count() == 0);
+    count++;
+
+    // MERGing HEAPS
 
     cout << count << " tests passed!" << endl;
     cin.get();
