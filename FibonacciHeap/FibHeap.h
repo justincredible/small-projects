@@ -531,7 +531,7 @@ public:
 
     // DESTRUCTOR
     FibHeap<T>::~FibHeap() {
-        while ( heap->min ) {
+        while ( heap->min && heap->n ) {
             delete ExtractMin(heap);
         }
         delete heap;
@@ -544,23 +544,50 @@ public:
 
     int en_count() { return nodes.size(); }
 
+    T en_valueFirst() { return nodes.first()->key; }
     T en_valueLast() { return nodes.back()->key; }
 
+    void en_insertFirst() {
+        Insert(heap, nodes.front());
+        nodes.pop_front();
+    }
+
     void en_insertLast() { 
-        Insert(heap,nodes.back());
+        Insert(heap, nodes.back());
         nodes.pop_back();
     }
 
-    //
+    // places a new node at the end of the queue
+    void store(T value) {
+        nodes.push_back(new FibonacciNode<T>(value));
+    }
+
+    // places the minimum of the heap into the queue
     void storeMin() { nodes.push_back(ExtractMin(heap)); }
 
-    T extractMin() {
-        T value;
-        nodes.push_front(ExtractMin(heap));
-        value = nodes.front()->key;
-        delete nodes.front();
+    void insert(T value) {
+        nodes.push_front(new FibonacciNode<T>(value));
+        Insert(heap, nodes.front());
         nodes.pop_front();
+    }
+
+    // extracts the minimum value still in the heap
+    T min() { 
+        return heap->n ? 
+               Minimum(heap)->key :
+               numeric_limits<T>::lowest();
+    }
+
+    // extracts the minimum value and deletes the node that contained that
+    // value
+    T extractMin() {
+        T value = Minimum(heap)->key;
+        delete ExtractMin(heap);
         return value;
+    }
+
+    T& operator[](int index) {
+        return nodes[index]->key;
     }
 
 };
